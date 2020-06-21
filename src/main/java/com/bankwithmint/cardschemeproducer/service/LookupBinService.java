@@ -2,19 +2,25 @@ package com.bankwithmint.cardschemeproducer.service;
 
 import com.bankwithmint.cardschemeproducer.config.AppConfig;
 import com.bankwithmint.cardschemeproducer.dao.CardScheme;
+import com.bankwithmint.cardschemeproducer.model.HitCount;
 import com.bankwithmint.cardschemeproducer.model.LookupResponse;
 import com.bankwithmint.cardschemeproducer.model.Minted;
 import com.bankwithmint.cardschemeproducer.model.Payload;
 import com.bankwithmint.cardschemeproducer.repository.CardSchemeRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 @Service
 public class LookupBinService {
@@ -115,5 +121,29 @@ public class LookupBinService {
 
             cardSchemeRepository.save(cardScheme);
         }
+    }
+
+    public HitCount getHitCounts(int start, int limit){
+        HitCount hitCount = new HitCount();
+        hitCount.setSuccess(true);
+        hitCount.setStart(start);
+        hitCount.setLimit(limit);
+        hitCount.setSize(cardSchemeRepository.findAll().size());
+
+        Pageable pageable = PageRequest.of(start,limit);
+        // load first start to limit records from the database
+        Iterator<CardScheme> schemeIterator = cardSchemeRepository.findAll(pageable).iterator();
+        List<HashMap<String, Integer>> hitCounts = new ArrayList<>();
+
+        while (schemeIterator.hasNext()){
+            // construct the payload
+            CardScheme cardScheme = schemeIterator.next();
+            HashMap<String, Integer> binCount = new HashMap<>();
+            binCount.put(String.valueOf(cardScheme.getBin()), cardScheme.getBinCount());
+            hitCounts.add(binCount);
+        }
+        hitCount.setPayload(hitCounts);
+
+        return hitCount;
     }
 }
