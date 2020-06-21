@@ -84,7 +84,7 @@ public class LookupBinService {
         }
     }
 
-    private String jsonifyPayload(Payload payload){
+    public String jsonifyPayload(Payload payload){
         // Creating Object of ObjectMapper define in Jackson api
         ObjectMapper objectMapper = new ObjectMapper();
         String message = "";
@@ -98,7 +98,7 @@ public class LookupBinService {
         return message;
     }
 
-    private void updateHitCount(Long bin, Payload payload){
+    public void updateHitCount(Long bin, Payload payload){
         // update the hit count of this bin
         Iterable<CardScheme> schemeIterable = cardSchemeRepository.findByBin(bin);
         Iterator<CardScheme> schemeIterator = schemeIterable.iterator();
