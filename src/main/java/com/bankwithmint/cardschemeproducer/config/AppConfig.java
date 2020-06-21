@@ -21,8 +21,6 @@ public class AppConfig {
     @Value("${spring.kafka.template.default-topic}")
     public String kafkaTopic;
 
-    @Value("${spring.kafka.consumer.group-id}")
-    public String groupId;
 
     public String getGetBinEndpoint() {
         return getBinEndpoint;
@@ -48,13 +46,6 @@ public class AppConfig {
         this.kafkaTopic = kafkaTopic;
     }
 
-    public String getGroupId() {
-        return groupId;
-    }
-
-    public void setGroupId(String groupId) {
-        this.groupId = groupId;
-    }
 
     @Bean
     public RestTemplate restTemplate(){
