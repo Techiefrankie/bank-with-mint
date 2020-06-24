@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CardSchemeRepository extends JpaRepository<CardScheme, Long> {
-    Iterable<CardScheme> findByBin(Long bin);
+public interface CardSchemeRepository extends JpaRepository<CardScheme, String> {
+    CardScheme findByBin(String bin);
 }

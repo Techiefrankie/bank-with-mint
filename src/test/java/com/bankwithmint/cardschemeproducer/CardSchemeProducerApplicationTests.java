@@ -28,14 +28,14 @@ class CardSchemeProducerApplicationTests {
 
     @Test
     public void testVerifyBin() {
-        ResponseEntity<LookupResponse> entity = cardSchemeController.verify(545423L);
+        ResponseEntity<LookupResponse> entity = cardSchemeController.verify("545423");
         Assertions.assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.OK);
         Assertions.assertThat(entity.getBody()).hasFieldOrPropertyWithValue("success", true);
     }
 
     @Test
     public void testHitCounts(){
-        ResponseEntity<LookupResponse> entity = cardSchemeController.verify(545423L);
+        ResponseEntity<LookupResponse> entity = cardSchemeController.verify("545423");
         ResponseEntity<HitCount> hitCountResponseEntity = cardSchemeController.hitCount(0, 3);
         Assertions.assertThat(hitCountResponseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         Assertions.assertThat(hitCountResponseEntity.getBody()).hasFieldOrPropertyWithValue("success", true);
@@ -61,13 +61,14 @@ class CardSchemeProducerApplicationTests {
         // new bin search, save to db
         CardScheme cardScheme = new CardScheme();
         cardScheme.setBank("UBS");
-        cardScheme.setBin(545423L);
+        cardScheme.setBin("545423");
         cardScheme.setScheme("visa");
         cardScheme.setType("debit");
         cardScheme.setBinCount(1);
         cardSchemeRepository.save(cardScheme);
 
-        Assertions.assertThat(cardSchemeRepository.findByBin(545423L)).isNotEmpty();
+        Assertions.assertThat(cardSchemeRepository.findByBin("545423"))
+                .hasFieldOrPropertyWithValue("bin", "545423");
     }
 
 }

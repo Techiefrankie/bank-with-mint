@@ -30,9 +30,6 @@ public class LookupBinService {
     @Autowired
     AppConfig appConfig;
 
-    @Autowired
-    KafkaProducerService producerService;
-
     private KafkaProducerService process;
 
     @Autowired
@@ -43,36 +40,40 @@ public class LookupBinService {
         this.process = asyncService;
     }
 
-    public ResponseEntity<LookupResponse> lookupBin(Long bin){
+    public ResponseEntity<LookupResponse> lookupBin(String bin){
         LookupResponse lookupResponse = new LookupResponse();
+
+        // check if this bin has been verified previously and cached to the db
+        CardScheme cardScheme = cardSchemeRepository.findByBin(bin);
+        Payload payload = null;
+
+        if (cardScheme != null){
+            // construct payload from cardscheme object
+            payload = new Payload();
+            payload.setScheme(cardScheme.getScheme());
+            payload.setType(cardScheme.getType());
+            payload.setBank(cardScheme.getBank());
+        }
+        else {
+            payload = getFromBinList(bin);
+        }
+
+        lookupResponse.success = payload != null;
+        lookupResponse.payload = payload;
+
         try {
-            // call 3rd party API, https://binlist.net/ to search bin
-            ResponseEntity<Minted> response = restTemplate.getForEntity(appConfig.getBinEndpoint + "/{bin}",
-                    Minted.class,
-                    Long.toString(bin));
-
-            Minted minted = response.getBody();
-
-            //construct payload object
-            Payload payload = new Payload();
-            payload.setScheme(minted.getScheme());
-            payload.setType(minted.getType());
-            payload.setBank(minted.getBank().getName());
-
-            lookupResponse.setSuccess(true);
-            lookupResponse.setPayload(payload);
-
+            Payload finalPayload = payload;
             process.process(new Runnable() {
                 @Override
                 public void run() {
                     // update the number of times this bin has been searched
-                    updateHitCount(bin, payload);
+                    updateHitCount(bin, finalPayload);
 
                     // write payload to kafka topic in the background
                     String kafkaTopic = appConfig.getKafkaTopic();
-                    String message = jsonifyPayload(payload);
+                    String message = jsonifyPayload(finalPayload);
                     if (message != null)
-                        producerService.sendMessage(kafkaTopic, message);
+                        process.sendMessage(kafkaTopic, message);
                 }
             });
 
@@ -82,6 +83,29 @@ public class LookupBinService {
         catch (Exception exception){
             return new ResponseEntity<>(lookupResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private Payload getFromBinList(String bin){
+        Payload payload = null;
+        try {
+            // call 3rd party API, https://binlist.net/ to search bin
+            ResponseEntity<Minted> response = restTemplate.getForEntity(appConfig.getBinEndpoint + "/{bin}",
+                    Minted.class, bin);
+            if (response.getBody() != null){
+                Minted minted = response.getBody();
+
+                // parse response to construct payload object
+                payload = new Payload();
+                payload.setScheme(minted.getScheme());
+                payload.setType(minted.getType());
+                payload.setBank(minted.getBank().getName());
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return payload;
     }
 
     public String jsonifyPayload(Payload payload){
@@ -98,21 +122,19 @@ public class LookupBinService {
         return message;
     }
 
-    public void updateHitCount(Long bin, Payload payload){
+    public void updateHitCount(String bin, Payload payload){
         // update the hit count of this bin
-        Iterable<CardScheme> schemeIterable = cardSchemeRepository.findByBin(bin);
-        Iterator<CardScheme> schemeIterator = schemeIterable.iterator();
-        CardScheme cardScheme = new CardScheme();
+        CardScheme cardScheme = cardSchemeRepository.findByBin(bin);
 
-        if (schemeIterator.hasNext()){
-            // if this bin has been previously searched, update count
-            cardScheme = schemeIterator.next();
+        if (cardScheme != null){
+            // this bin has been previously searched, update count
             cardScheme.setBinCount(cardScheme.getBinCount() + 1);
 
             cardSchemeRepository.save(cardScheme);
         }
         else {
             // new bin search, save to db
+            cardScheme = new CardScheme();
             cardScheme.setBank(payload.getBank());
             cardScheme.setBin(bin);
             cardScheme.setScheme(payload.getScheme());
@@ -128,7 +150,7 @@ public class LookupBinService {
         hitCount.setSuccess(true);
         hitCount.setStart(start);
         hitCount.setLimit(limit);
-        hitCount.setSize(cardSchemeRepository.findAll().size());
+        hitCount.setSize((int) cardSchemeRepository.count());
 
         Pageable pageable = PageRequest.of(start,limit);
         // load first start to limit records from the database

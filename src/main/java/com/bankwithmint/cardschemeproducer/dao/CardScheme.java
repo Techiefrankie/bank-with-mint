@@ -14,7 +14,7 @@ public class CardScheme {
     private long id;
 
     @Column(name = "bin")
-    private Long bin;
+    private String bin;
     @Column(name = "scheme")
     private String scheme;
     @Column(name = "type")
@@ -33,11 +33,11 @@ public class CardScheme {
         this.id = id;
     }
 
-    public Long getBin() {
+    public String getBin() {
         return bin;
     }
 
-    public void setBin(Long bin) {
+    public void setBin(String bin) {
         this.bin = bin;
     }
 

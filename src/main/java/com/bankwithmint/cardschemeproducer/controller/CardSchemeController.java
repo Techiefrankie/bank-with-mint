@@ -17,7 +17,7 @@ public class CardSchemeController {
 
     @GetMapping(value = "/verify/{bin}", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<LookupResponse> verify(@PathVariable Long bin){
+    public ResponseEntity<LookupResponse> verify(@PathVariable String bin){
         return lookupBinService.lookupBin(bin);
     }
 
